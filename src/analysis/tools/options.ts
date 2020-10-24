@@ -11,7 +11,7 @@ export type Option = {
 const getOption = async (option: Option, retry = 0): Promise<string | false> => {
   term('Please provide the ')
     .red(option.name)(' (')
-    .magenta(option.description)(' )')
+    .magenta(option.description)(')')
     .nextLine(1);
 
   if (option.options) {

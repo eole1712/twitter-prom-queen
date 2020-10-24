@@ -1,8 +1,10 @@
 import { terminal as term } from 'terminal-kit';
 import { getOptions, Option } from '../tools/options';
-import { client } from '../tools/get-client';
+import { client } from '../tools/client';
 import fs from 'fs';
 import path from 'path';
+import { sleep } from '../tools/sleep';
+import { get } from 'lodash';
 
 const OPTIONS: Option[] = [
   {
@@ -26,7 +28,7 @@ const extractUsers = async (
   target: 'followers' | 'friends',
   lastUsers: unknown[] = [],
   lastCursor: number | undefined = undefined,
-) => {
+): Promise<unknown[]> => {
   let cursor: number | undefined = lastCursor;
   let users: unknown[] = lastUsers;
 
@@ -42,7 +44,7 @@ const extractUsers = async (
 
       term
         .restoreCursor()('Fetched ')
-        .red(users.length)(' ')(target)('.')
+        .red('' + users.length)(' ')(target)('.')
         .nextLine(2);
 
       if (result.next_cursor === 0) {
@@ -51,7 +53,22 @@ const extractUsers = async (
       cursor = result.next_cursor;
     }
   } catch (err) {
+    if (get(err, 'errors.0.code') === 88) {
+      let secs = 65;
+      while (secs !== 0) {
+        term
+          .restoreCursor()('Fetched ')
+          .red(users.length)(' ')(target)('. Waiting ')
+          .red(secs)(' seconds before continuing.')
+          .nextLine(2);
+        secs = secs - 1;
+        await sleep(1000);
+      }
+      return extractUsers(name, target, users, cursor);
+    }
     console.error(err);
+    await sleep(1000);
+    process.exit(1);
   }
 
   return users;
