@@ -74,10 +74,10 @@ export const extract = async () => {
 
       if (
         options.mode === 'continue' &&
-        fs.existsSync(path.join(__dirname, `../../data/${options.name}/${target}.json`))
+        fs.existsSync(path.join(__dirname, `../../../data/${options.name}/${target}.json`))
       ) {
         users = JSON.parse(
-          fs.readFileSync(path.join(__dirname, `../../data/${options.name}/${target}.json`)).toString(),
+          fs.readFileSync(path.join(__dirname, `../../../data/${options.name}/${target}.json`)).toString(),
         );
       }
       term('Starting ')
@@ -89,11 +89,11 @@ export const extract = async () => {
 
       users = await extractUsers(options.name, target as 'followers' | 'friends', users);
 
-      if (!fs.existsSync(path.join(__dirname, `../../data/${options.name}`))) {
-        fs.mkdirSync(path.join(__dirname, `../../data/${options.name}`));
+      if (!fs.existsSync(path.join(__dirname, `../../../data/${options.name}`))) {
+        fs.mkdirSync(path.join(__dirname, `../../../data/${options.name}`));
       }
       fs.writeFileSync(
-        path.join(__dirname, `../../data/${options.name}/${target}.json`),
+        path.join(__dirname, `../../../data/${options.name}/${target}.json`),
         JSON.stringify(users, null, 2),
       );
     }
