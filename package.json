@@ -1,0 +1,49 @@
+{
+  "name": "twitter-prom-queen",
+  "version": "1.0.0",
+  "description": "Let's try to become twitter's prom queen 👸",
+  "main": "index.js",
+  "scripts": {
+    "build": "rimraf ./build && tsc",
+    "dev": "ts-node-dev --respawn --transpileOnly ",
+    "start": "ts-node build/index.js",
+    "lint": "eslint . --ext .ts",
+    "prettier-format": "prettier --config .prettierrc 'src/**/*.ts' --write",
+    "prettier-watch": "onchange 'src/**/*.ts' -- prettier --write {{changed}}"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run prettier-format && npm run lint"
+    }
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.14.158",
+    "@types/node": "^14.0.24",
+    "@types/puppeteer": "^3.0.1",
+    "@types/terminal-kit": "^1.28.2",
+    "@typescript-eslint/eslint-plugin": "^2.21.0",
+    "@typescript-eslint/parser": "^2.21.0",
+    "eslint": "^6.8.0",
+    "eslint-config-prettier": "^6.10.0",
+    "eslint-plugin-prettier": "^3.1.2",
+    "husky": "^4.2.3",
+    "nodemon": "^1.19.1",
+    "onchange": "^6.1.0",
+    "prettier": "^1.19.1",
+    "rimraf": "^3.0.0",
+    "ts-node": "^8.3.0",
+    "ts-node-dev": "^1.0.0-pre.56",
+    "typescript": "^3.6.2"
+  },
+  "dependencies": {
+    "lodash": "^4.17.19",
+    "moment": "^2.27.0",
+    "puppeteer": "^5.2.1",
+    "terminal-kit": "^1.44.0",
+    "twitter-lite": "^0.14.0"
+  },
+  "repository": "https://github.com/eole1712/twitter-prom-queen",
+  "author": "eole1712 <grishjan@gmail.com>",
+  "license": "MIT",
+  "private": false
+}
