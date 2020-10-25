@@ -1,0 +1,14 @@
+diff --git a/node_modules/@types/terminal-kit/index.d.ts b/node_modules/@types/terminal-kit/index.d.ts
+index 7c97f11..5101fce 100644
+--- a/node_modules/@types/terminal-kit/index.d.ts
++++ b/node_modules/@types/terminal-kit/index.d.ts
+@@ -41,3 +41,9 @@ export function stringWidth(str: string): number;
+ export function truncateString(str: string, maxWidth: number): string;
+ 
+ export { Rect, ScreenBuffer, ScreenBufferHD, Terminal, TextBuffer };
++
++export declare class ColumnMenuMulti {
++  constructor(options: any)
++  
++  on(event: string, fn: (...p: any[]) => any): void
++}

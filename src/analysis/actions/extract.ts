@@ -1,22 +1,35 @@
 import { terminal as term } from 'terminal-kit';
 import { getOptions, Option } from '../tools/options';
 import { client } from '../tools/client';
-import fs from 'fs';
-import path from 'path';
 import moment from 'moment';
 import { sleep } from '../tools/sleep';
+import { User } from '../types/user.type';
+import { getUsers, writeUsers } from '../tools/users';
+
+term.on('key', (key: string) => {
+  switch (key) {
+    case 'CTRL_C':
+      term.grabInput(false);
+      term.hideCursor(false);
+      term.styleReset();
+      term.clear();
+      process.exit();
+      break;
+  }
+});
 
 const OPTIONS: Option[] = [
   {
     name: 'names',
     description: 'the usernames of the users',
+    isValid: data => data.length > 0,
     process: data => data.split(','),
   },
   {
     name: 'targets',
     description: 'the target type',
-    options: ['followers', 'friends', 'both'],
-    process: data => (data === 'both' ? ['friends', 'followers'] : [data]),
+    options: ['followers', 'friends'],
+    multiple: true,
   },
   {
     name: 'mode',
@@ -29,15 +42,15 @@ type OptionsType = { targets: ('followers' | 'friends')[]; names: string[]; mode
 const extractUsers = async (
   name: string,
   target: 'followers' | 'friends',
-  lastUsers: unknown[] = [],
+  lastUsers: User[] = [],
   lastCursor: number | undefined = undefined,
-): Promise<unknown[]> => {
+): Promise<User[]> => {
   let cursor: number | undefined = lastCursor;
-  let users: unknown[] = lastUsers;
+  let users: User[] = lastUsers;
 
   try {
     while (true) {
-      const result: { users: unknown[]; next_cursor: number; _headers: any } = await client.get(target + '/list', {
+      const result: { users: User[]; next_cursor: number; _headers: any } = await client.get(target + '/list', {
         screen_name: name,
         count: 200,
         ...(cursor ? { cursor } : {}),
@@ -93,13 +106,10 @@ export const extract = async () => {
   if (options) {
     for (const name of options.names) {
       for (const target of options.targets) {
-        let users: unknown[] = [];
+        let users: User[] = [];
 
-        if (
-          options.mode === 'continue' &&
-          fs.existsSync(path.join(__dirname, `../../../data/${name}/${target}.json`))
-        ) {
-          users = JSON.parse(fs.readFileSync(path.join(__dirname, `../../../data/${name}/${target}.json`)).toString());
+        if (options.mode === 'continue') {
+          users = getUsers(name, target);
         }
         term('Starting ')
           .green(name)("'s ")
@@ -110,10 +120,7 @@ export const extract = async () => {
 
         users = await extractUsers(name, target, users);
 
-        if (!fs.existsSync(path.join(__dirname, `../../../data/${name}`))) {
-          fs.mkdirSync(path.join(__dirname, `../../../data/${name}`));
-        }
-        fs.writeFileSync(path.join(__dirname, `../../../data/${name}/${target}.json`), JSON.stringify(users, null, 2));
+        writeUsers(name, target, users);
       }
     }
   }

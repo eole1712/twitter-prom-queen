@@ -38,6 +38,7 @@
   "dependencies": {
     "lodash": "^4.17.19",
     "moment": "^2.29.1",
+    "patch-package": "^6.2.2",
     "puppeteer": "^5.2.1",
     "terminal-kit": "^1.44.0",
     "twitter-lite": "^0.14.0"
