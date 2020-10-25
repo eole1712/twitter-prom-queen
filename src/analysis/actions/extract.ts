@@ -3,18 +3,20 @@ import { getOptions, Option } from '../tools/options';
 import { client } from '../tools/client';
 import fs from 'fs';
 import path from 'path';
+import moment from 'moment';
 import { sleep } from '../tools/sleep';
-import { get } from 'lodash';
 
 const OPTIONS: Option[] = [
   {
-    name: 'name',
-    description: 'the username of the user',
+    name: 'names',
+    description: 'the usernames of the users',
+    process: data => data.split(','),
   },
   {
-    name: 'target',
+    name: 'targets',
     description: 'the target type',
     options: ['followers', 'friends', 'both'],
+    process: data => (data === 'both' ? ['friends', 'followers'] : [data]),
   },
   {
     name: 'mode',
@@ -22,6 +24,7 @@ const OPTIONS: Option[] = [
     options: ['new', 'continue'],
   },
 ];
+type OptionsType = { targets: ('followers' | 'friends')[]; names: string[]; mode: 'new' | 'continue' };
 
 const extractUsers = async (
   name: string,
@@ -34,7 +37,7 @@ const extractUsers = async (
 
   try {
     while (true) {
-      const result: { users: unknown[]; next_cursor: number } = await client.get(target + '/list', {
+      const result: { users: unknown[]; next_cursor: number; _headers: any } = await client.get(target + '/list', {
         screen_name: name,
         count: 200,
         ...(cursor ? { cursor } : {}),
@@ -42,9 +45,26 @@ const extractUsers = async (
 
       users = [...users, ...result.users];
 
+      const timeToReset = moment(result._headers.get('x-rate-limit-reset') * 1000);
+      const remaining = parseInt(result._headers.get('x-rate-limit-remaining'), 10);
+
+      if (remaining === 0) {
+        let secs = timeToReset.diff(moment(), 'seconds');
+        while (secs !== 0) {
+          term
+            .restoreCursor()('Fetched ')
+            .red(users.length)(' ')(target)('. Waiting until ')
+            .red(timeToReset.format('HH:mm:ss'))(' (')
+            .red(secs)(' seconds) before continuing.')
+            .nextLine(2);
+          secs = secs - 1;
+          await sleep(1000);
+        }
+      }
+
       term
         .restoreCursor()('Fetched ')
-        .red('' + users.length)(' ')(target)('.')
+        .red(users.length || '0')(' ')(target)('.')
         .nextLine(2);
 
       if (result.next_cursor === 0) {
@@ -53,19 +73,6 @@ const extractUsers = async (
       cursor = result.next_cursor;
     }
   } catch (err) {
-    if (get(err, 'errors.0.code') === 88) {
-      let secs = 65;
-      while (secs !== 0) {
-        term
-          .restoreCursor()('Fetched ')
-          .red(users.length)(' ')(target)('. Waiting ')
-          .red(secs)(' seconds before continuing.')
-          .nextLine(2);
-        secs = secs - 1;
-        await sleep(1000);
-      }
-      return extractUsers(name, target, users, cursor);
-    }
     console.error(err);
     await sleep(1000);
     process.exit(1);
@@ -81,38 +88,33 @@ export const extract = async () => {
     .red('extraction')(' panel.')
     .nextLine(2);
 
-  const options = await getOptions(OPTIONS);
+  const options = (await getOptions(OPTIONS)) as OptionsType | null;
 
   if (options) {
-    const targets = options.target === 'both' ? ['followers', 'friends'] : [options.target];
+    for (const name of options.names) {
+      for (const target of options.targets) {
+        let users: unknown[] = [];
 
-    for (const target of targets) {
-      let users: unknown[] = [];
+        if (
+          options.mode === 'continue' &&
+          fs.existsSync(path.join(__dirname, `../../../data/${name}/${target}.json`))
+        ) {
+          users = JSON.parse(fs.readFileSync(path.join(__dirname, `../../../data/${name}/${target}.json`)).toString());
+        }
+        term('Starting ')
+          .green(name)("'s ")
+          .green(target)
+          .nextLine(2);
 
-      if (
-        options.mode === 'continue' &&
-        fs.existsSync(path.join(__dirname, `../../../data/${options.name}/${target}.json`))
-      ) {
-        users = JSON.parse(
-          fs.readFileSync(path.join(__dirname, `../../../data/${options.name}/${target}.json`)).toString(),
-        );
+        term.saveCursor();
+
+        users = await extractUsers(name, target, users);
+
+        if (!fs.existsSync(path.join(__dirname, `../../../data/${name}`))) {
+          fs.mkdirSync(path.join(__dirname, `../../../data/${name}`));
+        }
+        fs.writeFileSync(path.join(__dirname, `../../../data/${name}/${target}.json`), JSON.stringify(users, null, 2));
       }
-      term('Starting ')
-        .green(options.name)("'s ")
-        .green(target)
-        .nextLine(2);
-
-      term.saveCursor();
-
-      users = await extractUsers(options.name, target as 'followers' | 'friends', users);
-
-      if (!fs.existsSync(path.join(__dirname, `../../../data/${options.name}`))) {
-        fs.mkdirSync(path.join(__dirname, `../../../data/${options.name}`));
-      }
-      fs.writeFileSync(
-        path.join(__dirname, `../../../data/${options.name}/${target}.json`),
-        JSON.stringify(users, null, 2),
-      );
     }
   }
 };

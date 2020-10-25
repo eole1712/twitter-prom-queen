@@ -6,9 +6,10 @@ export type Option = {
   name: string;
   description: string;
   options?: string[];
+  process?: (data: string) => any;
 };
 
-const getOption = async (option: Option, retry = 0): Promise<string | false> => {
+const getOption = async (option: Option, retry = 0): Promise<any | null> => {
   term('Please provide the ')
     .red(option.name)(' (')
     .magenta(option.description)(')')
@@ -34,12 +35,12 @@ const getOption = async (option: Option, retry = 0): Promise<string | false> => 
   if (!answer || (option.options && !option.options.includes(answer))) {
     if (retry === 2) {
       term.red('Worng answer, exciting.').nextLine(2);
-      return false;
+      return null;
     }
     term.red("Worng answer, let's retry again.").nextLine(2);
     return getOption(option, retry + 1);
   }
-  return answer;
+  return option.process ? option.process(answer) : answer;
 };
 
 export const getOptions = async (options: Option[]) => {
@@ -47,8 +48,8 @@ export const getOptions = async (options: Option[]) => {
 
   for (const option of options) {
     const answer = await getOption(option);
-    if (!answer) {
-      return false;
+    if (answer === null) {
+      return null;
     }
 
     res[option.name] = answer;
